@@ -1,11 +1,25 @@
 FROM openjdk:8-jdk
 
-RUN apt-get update && apt-get install -y git curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git curl python-pip python-virtualenv python3-pip python3-virtualenv apt-transport-https && rm -rf /var/lib/apt/lists/*
+
+# Install docker-ce
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+    && echo "deb [arch=amd64] https://download.docker.com/linux/debian stretch stable" >> /etc/apt/sources.list.d/additional-repositories.list \
+    && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 437D05B5 \
+    && apt-get update
+RUN apt-get -y install docker-ce
+
+# Install Python 3.6
+RUN echo 'deb http://ftp.de.debian.org/debian testing main' >> /etc/apt/sources.list \
+      && echo 'APT::Default-Release "stable";' >> /etc/apt/apt.conf.d/00local \
+      && apt-get update
+RUN apt-get -y --allow-unauthenticated -t testing install python3.6
+
 
 ARG user=jenkins
 ARG group=jenkins
-ARG uid=1000
-ARG gid=1000
+ARG uid=1005
+ARG gid=1005
 ARG http_port=8080
 ARG agent_port=50000
 
@@ -17,6 +31,9 @@ ENV JENKINS_SLAVE_AGENT_PORT ${agent_port}
 # ensure you use the same uid
 RUN groupadd -g ${gid} ${group} \
     && useradd -d "$JENKINS_HOME" -u ${uid} -g ${gid} -m -s /bin/bash ${user}
+
+# give jenkins docker rights
+RUN usermod -aG docker -u 1005 jenkins
 
 # Jenkins home directory is a volume, so configuration and build history
 # can be persisted and survive image upgrades
